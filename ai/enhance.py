@@ -40,7 +40,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True, help="json or jsonline data file")
     parser.add_argument("--max_workers", type=int, default=1, help="Maximum number of parallel workers")
-    parser.add_argument("--max_tokens", type=int, default=1024, help="Maximum output tokens")
+    parser.add_argument("--max_tokens", type=int, default=4096, help="Maximum output tokens")
     return parser.parse_args()
 
 
@@ -163,7 +163,7 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 1024
         abs_url = item['abs']
         pdf_url = abs_url.replace('/content/', '/content/') + '.full.pdf'
 
-    max_content_length = 5000
+    max_content_length = 3000
     full_text = None
 
     for attempt in range(3):
