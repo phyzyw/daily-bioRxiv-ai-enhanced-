@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="daily bioRxiv ai-enhanced settings">
+    <title>Settings - Daily bioRxiv AI Enhanced</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="header-center">
+                    <a href="index.html" class="site-logo">
+                        <span class="site-title">Daily bioRxiv AI Enhanced</span>
+                    </a>
+                </div>
+                <div class="header-controls">
+                    <a href="index.html" class="back-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z" fill="currentColor"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="settings-page">
+            <div class="settings-container">
+                <div class="settings-header">
+                    <h1>Settings</h1>
+                    <p>Customize your Daily bioRxiv AI Enhanced experience</p>
+                </div>
+
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h2 class="keyword-section-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7V17C3 18.1 3.9 18.99 5 18.99L16 19C16.67 19 17.27 18.67 17.63 18.16L22 12L17.63 5.84ZM16 17H5V7H16L19.55 12L16 17Z" fill="currentColor"/>
+                            </svg>
+                            Interested Keywords
+                        </h2>
+                        <div class="settings-card">
+                            <div class="settings-item">
+                                <div class="tag-selector">
+                                    <div class="selected-tags" id="selectedKeywords">
+                                        <div class="empty-tag-message" id="emptyTagMessage">No keywords added yet. Add some keywords below.</div>
+                                    </div>
+                                    <div class="tag-input-container">
+                                        <input type="text" id="keywordInput" class="settings-input" placeholder="Enter a keyword and press Enter...">
+                                        <button id="addKeyword" class="add-tag-button">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h2 class="keyword-section-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
+                            </svg>
+                            Interested Authors
+                        </h2>
+                        <div class="settings-card">
+                            <div class="settings-item">
+                                <div class="tag-selector">
+                                    <div class="selected-tags" id="selectedAuthors">
+                                        <div class="empty-tag-message" id="emptyAuthorMessage">No authors added yet. Add some authors below.</div>
+                                    </div>
+                                    <div class="tag-input-container">
+                                        <input type="text" id="authorInput" class="settings-input" placeholder="Enter an author name and press Enter...">
+                                        <button id="addAuthor" class="add-tag-button">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button id="resetSettings" class="button">Reset to Default</button>
+                    <button id="saveSettings" class="button primary">Save Settings</button>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <div class="footer-content">
+                <p>&copy; 2026 daily-bioRxiv-ai-enhanced</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/settings.js"></script>
+</body>
+</html>
