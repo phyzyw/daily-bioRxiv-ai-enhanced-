@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="daily bioRxiv ai-enhanced">
+    <title>Daily bioRxiv AI Enhanced</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.bottom = '10px';
+            errorDiv.style.left = '10px';
+            errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+            errorDiv.style.color = 'white';
+            errorDiv.style.padding = '10px';
+            errorDiv.style.borderRadius = '5px';
+            errorDiv.style.zIndex = '10000';
+            errorDiv.style.maxWidth = '80%';
+            errorDiv.textContent = `Error: ${message} (${source}:${lineno}:${colno})`;
+            document.body.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+            return false;
+        };
+    </script>
+    <script>
+        window.CATEGORIES = "";
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <div class="header-center">
+                    <a href="index.html" class="site-logo">
+                        <span class="site-title">Daily bioRxiv AI Enhanced</span>
+                    </a>
+                </div>
+
+                <div class="header-controls">
+                    <div class="date-selector">
+                        <div class="date-display">
+                            <span id="currentDate">Loading...</span>
+                            <button id="calendarButton" class="icon-button">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 4H18V2H16V4H8V2H6V4H5C3.89 4 3.01 4.9 3.01 6L3 20C3 21.1 3.89 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4ZM19 20H5V9H19V20ZM7 11H12V16H7V11Z" fill="currentColor"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <a href="settings.html" class="icon-button" title="Settings">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            <div class="category-nav">
+                <div class="category-label-container">
+                    <span class="category-nav-label">Category</span>
+                    <div class="category-scroll">
+                        <button class="category-button active" data-category="all">All</button>
+                    </div>
+                </div>
+                <div class="keyword-label-container">
+                    <span class="keyword-nav-label">Keywords</span>
+                    <div class="keyword-scroll" id="keywordTags"></div>
+                </div>
+                <div class="author-label-container">
+                    <span class="author-nav-label">Authors</span>
+                    <div class="author-scroll" id="authorTags"></div>
+                </div>
+            </div>
+        </header>
+        <main>
+            <div class="date-picker-modal" id="datePickerModal">
+                <div class="date-picker-content">
+                    <div class="date-picker-body">
+                        <h3 class="date-picker-title">Select Date</h3>
+                        <div class="flatpickr-container">
+                            <input type="text" id="datepicker" placeholder="Select Date" data-input>
+                        </div>
+                        <div class="date-range-selector">
+                            <span class="toggle-label">Range</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dateRangeMode">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="paper-container" id="paperContainer">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Loading papers...</p>
+                </div>
+            </div>
+        </main>
+        <div class="paper-modal" id="paperModal">
+            <div class="paper-modal-content">
+                <div class="paper-modal-header">
+                    <h2 id="modalTitle">Details</h2>
+                    <button id="closeModal" class="icon-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="paper-modal-body" id="modalBody">
+                </div>
+                <div class="paper-modal-footer">
+                    <div class="paper-navigation">
+                        <span class="navigation-hint">← → to navigate • space for random</span>
+                        <span id="paperPosition" class="paper-position">-</span>
+                    </div>
+                    <div class="paper-modal-buttons">
+                        <a id="pdfLink" href="#" target="_blank" class="button icon-button" title="Open PDF">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 2H8C6.9 2 6 2.9 6 4V16C6 17.1 6.9 18 8 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H8V4H20V16ZM4 6H2V20C2 21.1 2.9 22 4 22H18V20H4V6ZM16 12V9C16 8.45 15.55 8 15 8H13V13H15C15.55 13 16 12.55 16 12ZM14 9H15V12H14V9ZM18 11H19V10H18V9H19V8H17V13H18V11ZM10 11H11C11.55 11 12 10.55 12 10V9C12 8.45 11.55 8 11 8H9V13H10V11ZM10 9H11V10H10V9Z" fill="#a42c25"/>
+                            </svg>
+                        </a>
+                        <a id="paperLink" href="#" target="_blank" class="button icon-button primary" title="Open in bioRxiv">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2026 daily-bioRxiv-ai-enhanced</p>
+        </div>
+    </footer>
+    <script src="js/app.js?v=1.0.0"></script>
+</body>
+</html>

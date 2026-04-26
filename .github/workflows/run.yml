@@ -1,0 +1,172 @@
+name: bioRxiv-daily-ai-enhanced
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  crawl-and-summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: '3.9'
+          activate-environment: biorxiv-env
+          auto-activate-base: false
+
+      - name: Install dependencies
+        shell: bash -l {0}
+        run: |
+          pip install requests==2.32.3 tqdm==4.66.5 python-dotenv==1.0.1 PyPDF2==3.0.1
+
+      - name: Set today date
+        id: set-today
+        run: echo "TODAY=$(date -u +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Clean up invalid files
+        shell: bash -l {0}
+        run: |
+          if [ -f "data/null" ]; then
+            rm data/null
+            echo "Removed invalid file: data/null"
+          fi
+
+      - name: Run bioRxiv API spider
+        shell: bash -l {0}
+        env:
+          KEYWORDS: ${{ vars.KEYWORDS }}
+          DAYS: ${{ vars.DAYS }}
+          OUTPUT_FILE: data/${{ env.TODAY }}.json
+        run: |
+          echo "OUTPUT_FILE is $OUTPUT_FILE"
+          python daily_biorxiv/daily_biorxiv/spiders/spider_biorxiv.py
+
+      - name: Check output file
+        shell: bash -l {0}
+        run: |
+          ls -l data/
+          if [ -f "data/${{ env.TODAY }}.json" ]; then
+            echo "Output file data/${{ env.TODAY }}.json exists"
+          else
+            echo "Error: Output file data/${{ env.TODAY }}.json not found"
+            exit 1
+          fi
+
+      - name: Check for duplicates
+        id: dedup_check
+        shell: bash -l {0}
+        run: |
+          echo "Performing deduplication check..."
+          cd daily_biorxiv
+          set +e
+          python daily_biorxiv/check_stats.py
+          dedup_exit_code=$?
+          set -e
+          echo "Dedup check exit code: $dedup_exit_code"
+          echo "dedup_exit_code=$dedup_exit_code" >> $GITHUB_OUTPUT
+          case $dedup_exit_code in
+            0) echo "has_new_content=true" >> $GITHUB_OUTPUT ;;
+            1) echo "has_new_content=false" >> $GITHUB_OUTPUT; echo "skip_reason=no_new_content" >> $GITHUB_OUTPUT ;;
+            2) echo "has_new_content=false" >> $GITHUB_OUTPUT; echo "skip_reason=processing_error" >> $GITHUB_OUTPUT; exit 1 ;;
+            *) echo "has_new_content=false" >> $GITHUB_OUTPUT; echo "skip_reason=unknown_error" >> $GITHUB_OUTPUT; exit 1 ;;
+          esac
+
+      - name: AI Enhancement Processing
+        if: steps.dedup_check.outputs.has_new_content == 'true'
+        shell: bash -l {0}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          LANGUAGE: ${{ vars.LANGUAGE }}
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+        run: |
+          echo "Starting AI enhancement processing..."
+          cd ai
+          export CLOUDFLARE_ACCOUNT_ID
+          export CLOUDFLARE_API_TOKEN
+          export LANGUAGE
+          export MODEL_NAME
+          python enhance.py --data ../data/${{ env.TODAY }}.json --max_workers 2
+          if [ -f "../data/${{ env.TODAY }}_AI_enhanced_${{ vars.LANGUAGE }}.jsonl" ]; then
+            echo "AI enhanced file exists"
+          else
+            echo "Error: AI enhanced file not found"
+            exit 1
+          fi
+          echo "AI enhancement processing completed"
+
+      - name: Convert to Markdown
+        if: steps.dedup_check.outputs.has_new_content == 'true'
+        shell: bash -l {0}
+        env:
+          LANGUAGE: ${{ vars.LANGUAGE }}
+        run: |
+          echo "Converting to Markdown format..."
+          cd to_md
+          AI_FILE="../data/${{ env.TODAY }}_AI_enhanced_${{ vars.LANGUAGE }}.jsonl"
+          if [ -f "$AI_FILE" ]; then
+            python convert.py --data "$AI_FILE"
+          else
+            echo "Error: AI enhanced file not found"
+            exit 1
+          fi
+          echo "Markdown conversion completed"
+
+      - name: Update file list
+        if: steps.dedup_check.outputs.has_new_content == 'true'
+        shell: bash -l {0}
+        run: |
+          ls data/*.json data/*.jsonl 2>/dev/null | sed 's|data/||' > assets/file-list.txt || true
+          echo "File list updated"
+
+      - name: Commit changes
+        if: steps.dedup_check.outputs.has_new_content == 'true'
+        shell: bash -l {0}
+        env:
+          EMAIL: ${{ vars.EMAIL }}
+          NAME: ${{ vars.NAME }}
+        run: |
+          git config --global user.email "${{ env.EMAIL }}"
+          git config --global user.name "${{ env.NAME }}"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "update: ${{ env.TODAY }} bioRxiv papers"
+
+      - name: Pull latest changes and push
+        if: steps.dedup_check.outputs.has_new_content == 'true'
+        shell: bash -l {0}
+        run: |
+          git config pull.rebase true
+          git config rebase.autoStash true
+          for i in {1..3}; do
+            if git push origin main; then echo "Push successful"; break
+            else git pull origin main --no-edit || true
+              if [ $i -eq 3 ]; then echo "Failed to push after 3 attempts"; exit 1; fi
+            fi
+          done
+
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          keep_files: true
+
+      - name: Summary
+        shell: bash -l {0}
+        run: |
+          if [ "${{ steps.dedup_check.outputs.has_new_content }}" = "true" ]; then
+            echo "Workflow completed: New content found and processed successfully"
+          else
+            echo "Workflow completed: No new content after deduplication"
+          fi
