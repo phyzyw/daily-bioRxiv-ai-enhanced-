@@ -91,7 +91,7 @@ class BiorxivAPISpider:
             messages = data.get('messages', [])
             total = 0
             if messages and len(messages) > 0:
-                total = messages[0].get('total', 0)
+                total = int(messages[0].get('total', 0))
             cursor += len(collection)
             if cursor >= total:
                 break
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     today = datetime.now(ZoneInfo("UTC")).strftime('%Y-%m-%d')
     output_file = os.environ.get("OUTPUT_FILE", f"data/{today}.json")
     spider = BiorxivAPISpider(
-        keywords=keywords.split(","),
+        keywords=[kw.strip() for kw in keywords.split(",")],
         days=days
     )
     results = spider.run(output_file=output_file)
