@@ -45,9 +45,9 @@ class BiorxivAPISpider:
             return False
         text_lower = text.lower()
         for kw in self.keywords:
-            if kw.lower() in text_lower:
-                return True
-        return False
+            if kw.lower() not in text_lower:
+                return False
+        return True
 
     def search_all_papers(self):
         begin_str = self.start_date.strftime('%Y-%m-%d')
@@ -64,7 +64,7 @@ class BiorxivAPISpider:
             for paper in collection:
                 title = paper.get('title', '')
                 abstract = paper.get('abstract', '')
-                if self.keyword_matches(title) or self.keyword_matches(abstract):
+                if self.keyword_matches(title) and self.keyword_matches(abstract):
                     doi = paper.get('doi', '')
                     date_str = paper.get('date', '')
                     authors_str = paper.get('authors', '')
