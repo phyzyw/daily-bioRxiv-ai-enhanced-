@@ -46,7 +46,8 @@ def parse_args():
 
 def download_pdf(url: str) -> str:
     try:
-        response = requests.get(url, timeout=60)
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; bioRxiv-daily-bot/1.0)"}
+        response = requests.get(url, timeout=60, headers=headers)
         response.raise_for_status()
         pdf_file = BytesIO(response.content)
         pdf_reader = PyPDF2.PdfReader(pdf_file)
