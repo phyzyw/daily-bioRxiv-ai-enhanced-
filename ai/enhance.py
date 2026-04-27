@@ -42,7 +42,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True, help="json or jsonline data file")
     parser.add_argument("--max_workers", type=int, default=1, help="Maximum number of parallel workers")
-    parser.add_argument("--max_tokens", type=int, default=8192, help="Maximum output tokens")
+    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum output tokens")
     return parser.parse_args()
 
 
@@ -65,7 +65,7 @@ def download_pdf(url: str) -> str:
         return None
 
 
-def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=8192):
+def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=2048):
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model_name}"
     headers = {
         "Authorization": f"Bearer {api_token}",
@@ -148,10 +148,22 @@ def estimate_token_count(text: str) -> int:
     return int(other_chars / 4 + chinese_chars / 2) + 100
 
 
-def process_single_item(item: Dict, language: str, max_output_tokens: int = 1024) -> Dict:
+def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048) -> Dict:
     account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     api_token = os.environ.get("CLOUDFLARE_API_TOKEN")
-    model_name = os.environ.get("MODEL_NAME", "@cf/meta/llama-3-8b-instruct")
+    model_name = os.environ.get("MODEL_NAME", "@cf/meta/llama-3.3-70b-instruct-fp8-fast")
+
+    MODEL_CONTEXT_LIMITS = {
+        "@cf/meta/llama-3-8b-instruct": 7968,
+        "@cf/meta/llama-3.1-8b-instruct": 8192,
+        "@cf/meta/llama-3.1-8b-instruct-fast": 8192,
+        "@cf/meta/llama-3.3-70b-instruct-fp8-fast": 131072,
+        "@cf/qwen/qwen3-30b-a3b-fp8": 40960,
+        "@cf/mistral/mistral-small-3.1-24b-instruct": 131072,
+        "@cf/google/gemma-3-12b-it": 131072,
+    }
+    context_limit = MODEL_CONTEXT_LIMITS.get(model_name, 8000)
+    max_output_tokens = min(max_output_tokens, context_limit - 500)
 
     if not account_id or not api_token:
         print(f"Missing Cloudflare credentials", file=sys.stderr)
@@ -184,15 +196,18 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 1024
 
             content_preview = content_source[:max_content_length]
             prompt = TEMPLATE.format(language=language, content=content_preview)
-            estimated_tokens = estimate_token_count(prompt) + max_output_tokens
+            estimated_input_tokens = estimate_token_count(prompt)
+            total_estimated = estimated_input_tokens + max_output_tokens
 
-            print(f"Processing {item.get('id', 'unknown')}, attempt {attempt + 1}, estimated tokens: {estimated_tokens}", file=sys.stderr)
+            print(f"Processing {item.get('id', 'unknown')}, attempt {attempt + 1}, model: {model_name}, context_limit: {context_limit}, input_tokens: {estimated_input_tokens}, max_output: {max_output_tokens}, total: {total_estimated}", file=sys.stderr)
 
-            if estimated_tokens > 7000:
-                max_content_length = int(max_content_length * 0.7)
-                content_preview = content_source[:max_content_length]
-                prompt = TEMPLATE.format(language=language, content=content_preview)
-                print(f"Reduced content length to {max_content_length} for token conservation", file=sys.stderr)
+            if total_estimated > context_limit:
+                available_for_content = context_limit - max_output_tokens - 500
+                if available_for_content > 500:
+                    max_content_length = min(max_content_length, available_for_content * 4)
+                    content_preview = content_source[:max_content_length]
+                    prompt = TEMPLATE.format(language=language, content=content_preview)
+                    print(f"Reduced content length to {max_content_length} for token conservation", file=sys.stderr)
 
             response_text = call_cloudflare_api(account_id, api_token, model_name, prompt, max_output_tokens)
 
@@ -214,8 +229,8 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 1024
             if any(keyword in error_msg for keyword in ["token", "context window", "limit exceeded", "5021"]):
                 print(f"Token limit exceeded, reducing content length for retry", file=sys.stderr)
                 max_content_length = int(max_content_length * 0.6)
-                if max_content_length < 1000:
-                    max_content_length = 1000
+                if max_content_length < 500:
+                    max_content_length = 500
 
         if attempt < 2:
             sleep(8)
