@@ -16,23 +16,25 @@ if os.path.exists('.env'):
     dotenv.load_dotenv()
 
 TEMPLATE = """
-Please generate a {language} JSON summary for the following academic paper:
+请用中文对以下学术论文生成JSON格式的摘要总结：
 
 {content}
 
-Return format:
+请严格按以下JSON格式返回（所有字段内容必须使用中文）：
 {{
-  "tldr": "Concise summary (1-2 sentences)",
-  "motivation": "Research motivation",
-  "method": "Methods used",
-  "result": "Main results",
-  "conclusion": "Conclusion and significance"
+  "tldr": "简洁摘要（1-2句话）",
+  "motivation": "研究动机",
+  "method": "使用的方法",
+  "result": "主要结果",
+  "conclusion": "结论与意义"
 }}
+
+重要：所有字段内容必须用中文撰写，不要使用英文。只返回JSON对象，不要包含任何其他文字。
 """
 
 SYSTEM = """
-You are an academic paper summary AI. Only return a valid JSON object with fields: tldr, motivation, method, result, conclusion.
-Do not include any text outside the JSON.
+你是一个学术论文摘要AI助手。请用中文对论文进行总结，只返回一个有效的JSON对象，包含以下字段：tldr, motivation, method, result, conclusion。
+所有字段内容必须使用中文。不要在JSON之外包含任何文字。
 """
 
 
@@ -40,7 +42,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True, help="json or jsonline data file")
     parser.add_argument("--max_workers", type=int, default=1, help="Maximum number of parallel workers")
-    parser.add_argument("--max_tokens", type=int, default=4096, help="Maximum output tokens")
+    parser.add_argument("--max_tokens", type=int, default=8192, help="Maximum output tokens")
     return parser.parse_args()
 
 
@@ -63,7 +65,7 @@ def download_pdf(url: str) -> str:
         return None
 
 
-def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=1024):
+def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=8192):
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model_name}"
     headers = {
         "Authorization": f"Bearer {api_token}",
