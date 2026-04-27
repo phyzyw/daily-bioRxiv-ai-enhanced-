@@ -154,12 +154,13 @@ jobs:
         run: |
           git config --global user.email "${{ env.EMAIL }}"
           git config --global user.name "${{ env.NAME }}"
-          git add .
-          if git diff --staged --quiet; then
+          git add -A
+          CHANGED=$(git diff --staged --name-only)
+          if [ -z "$CHANGED" ]; then
             echo "No changes to commit"
-            exit 0
+          else
+            git commit -m "update: ${{ env.TODAY }} bioRxiv papers"
           fi
-          git commit -m "update: ${{ env.TODAY }} bioRxiv papers"
 
       - name: Pull latest changes and push
         if: steps.dedup_check.outputs.has_new_content == 'true'
