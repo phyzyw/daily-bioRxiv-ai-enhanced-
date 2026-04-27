@@ -29,13 +29,33 @@ jobs:
         id: set-today
         run: echo "TODAY=$(date -u +%Y-%m-%d)" >> $GITHUB_ENV
 
-      - name: Clean up invalid files
+      - name: Clean up old and invalid files
         shell: bash -l {0}
         run: |
           if [ -f "data/null" ]; then
             rm data/null
             echo "Removed invalid file: data/null"
           fi
+          find data/ -name "*.json" -not -name "*.jsonl" | while read f; do
+            first_line=$(head -1 "$f")
+            if echo "$first_line" | grep -qiE "arxiv|cond-mat|hep-|astro-|physics"; then
+              echo "Removing old arxiv file: $f"
+              rm "$f"
+            elif echo "$first_line" | grep -qiE '"biochemistry"|"biophysics"|"neuroscience"|"bioengineering"|"bioinformatics"|"cancer biology"|"evolutionary biology"|"pharmacology"'; then
+              echo "Removing old-category file: $f"
+              rm "$f"
+            fi
+          done
+          find data/ -name "*.jsonl" | while read f; do
+            first_line=$(head -1 "$f")
+            if echo "$first_line" | grep -qiE '"biochemistry"|"biophysics"|"neuroscience"|"bioengineering"|"bioinformatics"|"cancer biology"|"evolutionary biology"|"pharmacology"'; then
+              echo "Removing old-category jsonl: $f"
+              rm "$f"
+            fi
+          done
+          find data/ -name "*.md" -exec rm {} \;
+          ls data/ 2>/dev/null || echo "data/ directory empty or missing"
+          echo "Cleanup completed"
 
       - name: Run bioRxiv API spider
         shell: bash -l {0}

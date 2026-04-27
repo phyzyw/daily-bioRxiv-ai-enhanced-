@@ -42,12 +42,13 @@ class BiorxivAPISpider:
 
     def keyword_matches(self, text):
         if not text:
-            return False
+            return []
         text_lower = text.lower()
+        matched = []
         for kw in self.keywords:
             if kw.lower() in text_lower:
-                return True
-        return False
+                matched.append(kw)
+        return matched
 
     def search_all_papers(self):
         begin_str = self.start_date.strftime('%Y-%m-%d')
@@ -64,30 +65,35 @@ class BiorxivAPISpider:
             for paper in collection:
                 title = paper.get('title', '')
                 abstract = paper.get('abstract', '')
-                if self.keyword_matches(title) or self.keyword_matches(abstract):
-                    doi = paper.get('doi', '')
-                    date_str = paper.get('date', '')
-                    authors_str = paper.get('authors', '')
-                    authors = [a.strip() for a in authors_str.split(';') if a.strip()] if authors_str else []
-                    category = paper.get('category', 'Uncategorized')
-                    subjects_str = paper.get('subjects', '')
-                    categories = [s.strip() for s in subjects_str.split(',') if s.strip()] if subjects_str else [category]
-                    paper_id = doi.split('/')[-1] if doi else ''
-                    abs_url = f"https://www.biorxiv.org/content/{doi}" if doi else ''
-                    pdf_url = f"https://www.biorxiv.org/content/{doi}.full.pdf" if doi else ''
-                    all_papers.append({
-                        "id": paper_id,
-                        "doi": doi,
-                        "title": title.replace('\n', ''),
-                        "authors": authors,
-                        "summary": abstract.replace('\n', ' '),
-                        "published": date_str,
-                        "categories": categories,
-                        "category": category,
-                        "pdf_url": pdf_url,
-                        "abs": abs_url,
-                        "primary_category": categories[0] if categories else category
-                    })
+                title_matches = self.keyword_matches(title)
+                abstract_matches = self.keyword_matches(abstract)
+                all_matched = list(set(title_matches + abstract_matches))
+                if not all_matched:
+                    continue
+                if len(all_matched) > 1:
+                    categories = [' + '.join(sorted(all_matched))]
+                else:
+                    categories = all_matched
+                doi = paper.get('doi', '')
+                date_str = paper.get('date', '')
+                authors_str = paper.get('authors', '')
+                authors = [a.strip() for a in authors_str.split(';') if a.strip()] if authors_str else []
+                paper_id = doi.split('/')[-1] if doi else ''
+                abs_url = f"https://www.biorxiv.org/content/{doi}" if doi else ''
+                pdf_url = f"https://www.biorxiv.org/content/{doi}.full.pdf" if doi else ''
+                all_papers.append({
+                    "id": paper_id,
+                    "doi": doi,
+                    "title": title.replace('\n', ''),
+                    "authors": authors,
+                    "summary": abstract.replace('\n', ' '),
+                    "published": date_str,
+                    "categories": categories,
+                    "category": categories[0],
+                    "pdf_url": pdf_url,
+                    "abs": abs_url,
+                    "primary_category": categories[0]
+                })
             messages = data.get('messages', [])
             total = 0
             if messages and len(messages) > 0:
