@@ -166,7 +166,7 @@ def estimate_token_count(text: str) -> int:
 def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048) -> Dict:
     account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     api_token = os.environ.get("CLOUDFLARE_API_TOKEN")
-    model_name = os.environ.get("MODEL_NAME", "@cf/meta/llama-3.3-70b-instruct-fp8-fast")
+    model_name = os.environ.get("MODEL_NAME", "@cf/meta/llama-3-8b-instruct")
 
     MODEL_CONTEXT_LIMITS = {
         "@cf/meta/llama-3-8b-instruct": 7968,
