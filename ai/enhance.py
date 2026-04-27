@@ -84,12 +84,27 @@ def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=20
         response = requests.post(url, headers=headers, json=payload, timeout=90)
         response.raise_for_status()
         result = response.json()
-        if 'result' in result and 'response' in result['result']:
-            return result['result']['response']
+        response_text = None
+        if 'result' in result:
+            r = result['result']
+            if isinstance(r, dict) and 'response' in r:
+                response_text = r['response']
+            elif isinstance(r, str):
+                response_text = r
+            elif isinstance(r, list) and len(r) > 0:
+                first = r[0]
+                if isinstance(first, dict) and 'response' in first:
+                    response_text = first['response']
+                elif isinstance(first, str):
+                    response_text = first
         elif 'response' in result:
-            return result['response']
+            response_text = result['response']
+        if response_text is not None:
+            if isinstance(response_text, list):
+                response_text = ' '.join(str(x) for x in response_text)
+            return str(response_text)
         else:
-            print(f"Unexpected API response structure: {result}", file=sys.stderr)
+            print(f"Unexpected API response structure: {json.dumps(result)[:500]}", file=sys.stderr)
             return None
     except requests.exceptions.RequestException as e:
         error_msg = str(e)
@@ -177,7 +192,7 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048
         abs_url = item['abs']
         pdf_url = abs_url.replace('/content/', '/content/') + '.full.pdf'
 
-    max_content_length = 3000
+    max_content_length = 10000
     full_text = None
 
     for attempt in range(3):
