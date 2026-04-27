@@ -192,7 +192,7 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048
         abs_url = item['abs']
         pdf_url = abs_url.replace('/content/', '/content/') + '.full.pdf'
 
-    max_content_length = 10000
+    max_content_length = 100000
     full_text = None
 
     for attempt in range(3):
