@@ -42,7 +42,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True, help="json or jsonline data file")
     parser.add_argument("--max_workers", type=int, default=1, help="Maximum number of parallel workers")
-    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum output tokens")
+    parser.add_argument("--max_tokens", type=int, default=4096, help="Maximum output tokens")
     return parser.parse_args()
 
 
@@ -65,7 +65,7 @@ def download_pdf(url: str) -> str:
         return None
 
 
-def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=2048):
+def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=4096):
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model_name}"
     headers = {
         "Authorization": f"Bearer {api_token}",
@@ -84,12 +84,27 @@ def call_cloudflare_api(account_id, api_token, model_name, prompt, max_tokens=20
         response = requests.post(url, headers=headers, json=payload, timeout=90)
         response.raise_for_status()
         result = response.json()
-        if 'result' in result and 'response' in result['result']:
-            return result['result']['response']
+        response_text = None
+        if 'result' in result:
+            r = result['result']
+            if isinstance(r, dict) and 'response' in r:
+                response_text = r['response']
+            elif isinstance(r, str):
+                response_text = r
+            elif isinstance(r, list) and len(r) > 0:
+                first = r[0]
+                if isinstance(first, dict) and 'response' in first:
+                    response_text = first['response']
+                elif isinstance(first, str):
+                    response_text = first
         elif 'response' in result:
-            return result['response']
+            response_text = result['response']
+        if response_text is not None:
+            if isinstance(response_text, list):
+                response_text = ' '.join(str(x) for x in response_text)
+            return str(response_text)
         else:
-            print(f"Unexpected API response structure: {result}", file=sys.stderr)
+            print(f"Unexpected API response structure: {json.dumps(result)[:500]}", file=sys.stderr)
             return None
     except requests.exceptions.RequestException as e:
         error_msg = str(e)
@@ -177,7 +192,7 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048
         abs_url = item['abs']
         pdf_url = abs_url.replace('/content/', '/content/') + '.full.pdf'
 
-    max_content_length = 3000
+    max_content_length = 100000
     full_text = None
 
     for attempt in range(3):
@@ -215,11 +230,20 @@ def process_single_item(item: Dict, language: str, max_output_tokens: int = 2048
                 print(f"Raw response for {item.get('id', 'unknown')}: {response_text[:200]}...", file=sys.stderr)
                 ai_data = extract_json_from_response(response_text)
 
-                if ai_data and all(key in ai_data for key in ["tldr", "motivation", "method", "result", "conclusion"]):
-                    print(f"Successfully extracted AI data for {item.get('id', 'unknown')}", file=sys.stderr)
-                    return {**item, 'AI': ai_data}
+                if ai_data:
+                    has_required = all(key in ai_data for key in ["tldr", "motivation", "method", "result", "conclusion"])
+                    if has_required:
+                        print(f"Successfully extracted AI data for {item.get('id', 'unknown')}", file=sys.stderr)
+                        return {**item, 'AI': ai_data}
+                    else:
+                        fallback = create_fallback_ai_data(item, False)
+                        for key in ["tldr", "motivation", "method", "result", "conclusion"]:
+                            if key not in ai_data or not ai_data[key]:
+                                ai_data[key] = fallback[key]
+                        print(f"Partially extracted AI data for {item.get('id', 'unknown')}, filling missing fields", file=sys.stderr)
+                        return {**item, 'AI': ai_data}
                 else:
-                    print(f"Invalid or incomplete JSON response for {item.get('id', 'unknown')}", file=sys.stderr)
+                    print(f"Invalid JSON response for {item.get('id', 'unknown')}", file=sys.stderr)
             else:
                 print(f"Empty response for {item.get('id', 'unknown')} on attempt {attempt + 1}", file=sys.stderr)
 
