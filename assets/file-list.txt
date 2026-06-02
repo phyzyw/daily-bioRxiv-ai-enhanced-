@@ -64,3 +64,5 @@
 2026-05-28_AI_enhanced_Chinese.jsonl
 2026-06-01.json
 2026-06-01_AI_enhanced_Chinese.jsonl
+2026-06-02.json
+2026-06-02_AI_enhanced_Chinese.jsonl
